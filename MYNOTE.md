@@ -54,8 +54,11 @@ npm install firebase-admin
 
 3. MQTT 
 
+DEV_EMBEDDED_BROKER=false
+MQTT_BROKER_URL=mqtt://broker.hivemq.com:1883
+MQTT_USERNAME=
+MQTT_PASSWORD=
 
+mqtt://test.mosquitto.org:1883
+mqtt://broker.emqx.io:1883
 
-
-4. Chức năng còn thiếu:
-- Điều chỉnh ngưỡng min, max spO2, BPM

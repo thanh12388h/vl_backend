@@ -8,19 +8,6 @@ const mqtt = require('mqtt');
 const net = require('net');
 const config = require('../config/mqtt.config');
 
-function startEmbeddedBroker(port) {
-  const Aedes = require('aedes');
-  const aedes = Aedes();
-  const server = net.createServer(aedes.handle);
-  server.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`[MQTT] Broker nhúng (Aedes) đang chạy tại mqtt://localhost:${port} (chỉ dùng cho DEV/TEST)`);
-  });
-  aedes.on('client', (client) => console.log(`[MQTT][broker] client kết nối: ${client.id}`));
-  aedes.on('clientDisconnect', (client) => console.log(`[MQTT][broker] client ngắt kết nối: ${client.id}`));
-  return { aedes, server };
-}
-
 function createBackendMqttClient() {
   let brokerHandle = null;
   if (config.DEV_EMBEDDED_BROKER) {

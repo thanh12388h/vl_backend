@@ -98,12 +98,13 @@ const mockImpl = {
   },
 };
 
-// ---------- REAL FIREBASE IMPLEMENTATION (khung sẵn, cần service account) ----------
 function loadServiceAccount() {
   // Cách 1 (khuyên dùng): trỏ tới file JSON tải từ Firebase Console, tránh
   // lỗi copy JSON nhiều dòng vào .env (dotenv chỉ đọc được 1 dòng cho mỗi biến).
   if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    // eslint-disable-next-line global-require
     const fsSync = require('fs');
+    // eslint-disable-next-line global-require
     const pathSync = require('path');
     const filePath = pathSync.resolve(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
     const raw = fsSync.readFileSync(filePath, 'utf-8');
@@ -123,7 +124,9 @@ function loadServiceAccount() {
 function buildRealImpl() {
   // firebase-admin v12+ dùng API dạng modular (import theo module con) thay
   // vì admin.apps / admin.database() như các phiên bản cũ.
+  // eslint-disable-next-line global-require
   const { initializeApp, cert, getApps } = require('firebase-admin/app');
+  // eslint-disable-next-line global-require
   const { getDatabase } = require('firebase-admin/database');
 
   if (!getApps().length) {
@@ -174,9 +177,14 @@ function buildRealImpl() {
       return ref.key;
     },
     async getAlerts(deviceId, limit = 50) {
-      const snap = await db.ref('alerts').orderByChild('deviceId').equalTo(deviceId).limitToLast(limit).get();
+      // Lấy toàn bộ node 'alerts' rồi lọc bằng JS (giống hệt bản mock) —
+      // tránh phải cấu hình Firebase Index (.indexOn) cho orderByChild/equalTo.
+      // Phù hợp vì số lượng alert trong hệ thống này thường không quá lớn.
+      const snap = await db.ref('alerts').get();
       if (!snap.exists()) return [];
-      return Object.values(snap.val());
+      const all = Object.values(snap.val());
+      const filtered = deviceId ? all.filter((a) => a.deviceId === deviceId) : all;
+      return filtered.slice(-limit);
     },
   };
 }

@@ -9,11 +9,12 @@
  * sau 3 lần liên tiếp (mỗi lần = trung bình của 5 mẫu).
  *
  * Chạy: node test/mock-esp32-simulator.js  (đảm bảo backend đang chạy trước)
- */
+ */require('dotenv').config(); // <-- Thêm dòng này ở dòng 1
 const mqtt = require('mqtt');
 
 const DEVICE_ID = process.env.SIM_DEVICE_ID || 'esp32_001';
 const BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
+const PREFIX = '24127541'; // Khớp với Backend
 const SAMPLE_INTERVAL_MS = 1000; // 1Hz như đặc tả
 const HEARTBEAT_INTERVAL_MS = 3000; // rút gọn để demo (thật là 30s)
 
@@ -44,7 +45,8 @@ function nextSample() {
 client.on('connect', () => {
   console.log(`[ESP32-SIM] ${DEVICE_ID} đã kết nối tới ${BROKER_URL}`);
 
-  const buzzerTopic = `device/${DEVICE_ID}/control/buzzer`;
+  // Cập nhật lại topic lắng nghe còi
+  const buzzerTopic = `${PREFIX}/device/${DEVICE_ID}/control/buzzer`;
   client.subscribe(buzzerTopic);
   client.on('message', (topic, payload) => {
     if (topic === buzzerTopic) {
@@ -53,7 +55,7 @@ client.on('connect', () => {
     }
   });
 
-  // gửi dữ liệu sinh hiệu mỗi giây
+  // Gửi dữ liệu sinh hiệu kèm tiền tố topic
   const dataTimer = setInterval(() => {
     const { spo2, bpm } = nextSample();
     const payload = {
@@ -62,8 +64,8 @@ client.on('connect', () => {
       bpm,
       timestamp: Math.floor(Date.now() / 1000),
     };
-    client.publish('device/data', JSON.stringify(payload));
-    console.log(`[ESP32-SIM] -> device/data`, payload);
+    client.publish(`${PREFIX}/device/data`, JSON.stringify(payload));
+    console.log(`[ESP32-SIM] -> ${PREFIX}/device/data`, payload);
 
     if (sampleCount >= TOTAL_NORMAL_SAMPLES + TOTAL_ABNORMAL_SAMPLES + 10) {
       clearInterval(dataTimer);
@@ -71,11 +73,11 @@ client.on('connect', () => {
     }
   }, SAMPLE_INTERVAL_MS);
 
-  // gửi heartbeat định kỳ
+  // Gửi heartbeat kèm tiền tố topic
   const heartbeatTimer = setInterval(() => {
     const payload = { deviceId: DEVICE_ID, status: 'online', timestamp: Math.floor(Date.now() / 1000) };
-    client.publish('device/status', JSON.stringify(payload));
-    console.log(`[ESP32-SIM] -> device/status`, payload);
+    client.publish(`${PREFIX}/device/status`, JSON.stringify(payload));
+    console.log(`[ESP32-SIM] -> ${PREFIX}/device/status`, payload);
   }, HEARTBEAT_INTERVAL_MS);
   heartbeatTimer.unref?.();
 });
