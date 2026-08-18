@@ -17,6 +17,7 @@ const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
 const DEVICE_ID = process.env.SIM_DEVICE_ID || 'esp32_001';
 
 async function callApi(label, method, path, body) {
+  // gửi request tới server thông qua BASE_URL + api (path) và nhận response (res)
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },

@@ -157,4 +157,40 @@ app.use(cors({ origin: 'https://domain-nodered-cua-ban.com' }));
 
 ```
 
+-----
 
+các nâng cấp có thể:
+mqttHandlers (xử lý gói tin từ mqtt gửi về)
+- thay đổi timestamp thành ngày, giờ cụ thể rồi mới lưu ở firebase. 
+- 
+
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/v1/device/buzzer?deviceId=esp32_001" `
+  -ContentType "application/json" `
+  -Body '{"state":true}'
+
+
+
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/v1/device/buzzer?deviceId=esp32_001" `
+  -ContentType "application/json" `
+  -Body '{"state":false}'
+
+
+
+
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/v1/device/esp32_001/oled/message" `
+  -ContentType "application/json" `
+  -Body '{"message":"HELLO BACKEND"}'
+
+
+
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:3000/api/v1/device/esp32_001/oled/message" `
+  -ContentType "application/json" `
+  -Body '{"message":"ALERT TEST"}'

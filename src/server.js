@@ -31,6 +31,7 @@ function start() {
     res.status(500).json({ error: 'Internal server error' });
   });
 
+  // lắng nghe request từ frontend liên tục 
   const server = app.listen(PORT, () => {
     console.log(`[HTTP] Backend REST API đang chạy tại http://localhost:${PORT}`);
     console.log(`[HTTP] Firebase mode: ${firebaseService.mode}`);

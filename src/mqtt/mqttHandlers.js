@@ -11,6 +11,7 @@ const deviceStatusService = require('../services/deviceStatus.service');
 const notificationService = require('../services/notification.service');
 
 function attachHandlers(mqttClient) {
+  // lắng nghe liên tục mqtt để nhận topic, payload khi cần  
   mqttClient.on('message', async (topic, payloadBuf) => {
     let payload;
     try {
@@ -58,6 +59,7 @@ async function handleDeviceData(payload) {
   // Chức năng 5-6: phân tích & phát hiện bất thường (đã tích hợp cơ chế liên tiếp)
   const analysis = alertDetection.analyze(deviceId, spo2Avg, bpmAvg);
 
+  // ***có thể tính toán thời gian này thành ngày giờ cụ thể 
   const ts = timestamp || Math.floor(Date.now() / 1000);
 
   // Chức năng 7: lưu dữ liệu vào Firebase
