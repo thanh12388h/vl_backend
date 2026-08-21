@@ -9,6 +9,25 @@ const { publishControl } = require('../mqtt/mqttHandlers');
 
 const DEFAULT_DEVICE_ID = process.env.DEFAULT_DEVICE_ID || 'esp32_001';
 
+
+function normalizeTimestamp(timestamp) {
+  if (typeof timestamp === 'number') {
+    return new Date(
+      timestamp < 1e12 ? timestamp * 1000 : timestamp
+    ).toISOString();
+  }
+
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  return null;
+}
+
 function makeControllers(mqttClient) {
   return {
     // GET /api/v1/latest
@@ -18,7 +37,7 @@ function makeControllers(mqttClient) {
       if (!latest) {
         return res.status(404).json({ error: 'Chưa có dữ liệu cho thiết bị này' });
       }
-      res.json({ spo2: latest.spo2, bpm: latest.bpm, status: latest.status });
+      res.json({ spo2: latest.spo2, bpm: latest.bpm, temperature: latest.temperature, status: latest.status });
     },
 
     // GET /api/v1/history?deviceId=...&limit=...
@@ -28,12 +47,14 @@ function makeControllers(mqttClient) {
       const history = await firebaseService.getHistory(deviceId, limit);
       res.json(
         history.map((h) => ({
-          time: new Date(h.timestamp * 1000).toISOString(),
+          time: normalizeTimestamp(h.timestamp),
           spo2: h.spo2,
           bpm: h.bpm,
+          temperature: h.temperature,
           status: h.status,
         }))
       );
+      console.log(`[API] ✅ Đã lấy lịch sử thành công cho ${deviceId}:`);
     },
 
     // POST /api/v1/device/buzzer   { state: true|false }
@@ -73,6 +94,7 @@ function makeControllers(mqttClient) {
         return res.status(400).json({ success: false, error: validation.error });
       }
       const updated = setThresholdsForDevice(deviceId, req.body);
+      console.log(`[API] ✅ Đã cập nhật threshold cho ${deviceId}:`);
       res.json({ success: true, thresholds: updated });
     },
 
@@ -85,10 +107,10 @@ function makeControllers(mqttClient) {
     // POST /api/v1/device/:deviceId/oled/message — tính năng bổ sung: hẹn giờ nhắn tin OLED
     async setOledMessage(req, res) {
       const { deviceId } = req.params;
-      const { message, scheduleTime } = req.body || {};
+      const { message, durationSec } = req.body || {};
       if (!message) return res.status(400).json({ success: false, error: "Thiếu trường 'message'" });
       try {
-        publishControl(mqttClient, deviceId, 'oled', { message, scheduleTime: scheduleTime || null });
+        publishControl(mqttClient, deviceId, 'oled', {type: 'reminder', message, duration_sec: durationSec || 15});
         res.json({ success: true });
       } catch (err) {
         res.status(500).json({ success: false, error: err.message });

@@ -194,3 +194,41 @@ Invoke-RestMethod `
   -Uri "http://localhost:3000/api/v1/device/esp32_001/oled/message" `
   -ContentType "application/json" `
   -Body '{"message":"ALERT TEST"}'
+
+
+-------
+base url: 
+http://<IP-BACKEND>:3000/api/v1
+
+---------------------
+REST API (frontend -> backend)
+
+GET  http://localhost:3000/api/v1/health
+
+GET  http://localhost:3000/api/v1/latest?deviceId=esp32_001
+
+GET  http://localhost:3000/api/v1/history?deviceId=esp32_001&limit=50
+
+GET  http://localhost:3000/api/v1/alerts?deviceId=esp32_001&limit=50
+
+GET  http://localhost:3000/api/v1/device/status?deviceId=esp32_001
+
+GET  http://localhost:3000/api/v1/device/esp32_001/thresholds
+
+PUT  http://localhost:3000/api/v1/device/esp32_001/thresholds
+
+POST http://localhost:3000/api/v1/device/buzzer?deviceId=esp32_001
+
+POST http://localhost:3000/api/v1/device/esp32_001/oled/message
+
+
+-----------------------
+
+MQTT 
+
+24127541/device/esp32_001/data
+24127541/device/esp32_001/status
+
+24127541/device/esp32_001/control/buzzer
+24127541/device/esp32_001/control/led
+24127541/device/esp32_001/control/oled

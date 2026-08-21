@@ -14,6 +14,10 @@ const DEFAULT_THRESHOLDS = {
     min: Number(process.env.BPM_MIN_NORMAL || 50),   // < 50: thấp (bất thường)
     max: Number(process.env.BPM_MAX_NORMAL || 120),  // > 120: cao (bất thường)
   },
+  temperature: {
+    min: Number(process.env.TEMP_MIN_NORMAL || 35),
+    max: Number(process.env.TEMP_MAX_NORMAL || 38),
+  },
 };
 
 const ALERT_CONSECUTIVE_COUNT = Number(process.env.ALERT_CONSECUTIVE_COUNT || 3);
@@ -31,6 +35,7 @@ function setThresholdsForDevice(deviceId, thresholds) {
   const merged = {
     spo2: { ...DEFAULT_THRESHOLDS.spo2, ...(thresholds.spo2 || {}) },
     bpm: { ...DEFAULT_THRESHOLDS.bpm, ...(thresholds.bpm || {}) },
+    temperature: { ...DEFAULT_THRESHOLDS.temperature, ...(thresholds.temperature || {})},
   };
   deviceThresholdOverrides.set(deviceId, merged);
   return merged;

@@ -24,7 +24,7 @@ function attachHandlers(mqttClient) {
     if (topic === config.TOPICS.DEVICE_DATA) {
       await handleDeviceData(payload);
     } else if (topic === config.TOPICS.DEVICE_STATUS) {
-      await handleDeviceStatus(payload);
+      await handleDeviceStatus(payload, topic);
     }
   });
 }
@@ -34,77 +34,83 @@ function attachHandlers(mqttClient) {
  * -> phân tích -> phát hiện & xác nhận bất thường -> lưu Firebase -> thông báo.
  */
 async function handleDeviceData(payload) {
-  const { deviceId, spo2, bpm, timestamp } = payload;
-  if (!deviceId) {
+  const { device_id, deviceId, spo2, bpm, temperature, timestamp } = payload;
+  const actualDeviceId = deviceId || device_id;
+
+  if (!actualDeviceId) {
     console.error('[MQTT] Thiếu deviceId trong payload device/data');
     return;
   }
 
   // Chức năng 4: tiền xử lý & kiểm tra hợp lệ
-  const validation = alertDetection.validateSample({ spo2, bpm });
+  const validation = alertDetection.validateSample({ spo2, bpm, temperature });
   if (!validation.valid) {
-    console.warn(`[MQTT] Dữ liệu lỗi từ ${deviceId}: ${validation.errors.join('; ')} — bỏ qua`);
+    console.warn(`[MQTT] Dữ liệu lỗi từ ${actualDeviceId}: ${validation.errors.join('; ')} — bỏ qua`);
     return;
   }
 
   // Chức năng 5: bộ lọc trung bình trượt N=5
-  const maResult = movingAverage.addSample(deviceId, spo2, bpm);
+  const maResult = movingAverage.addSample(actualDeviceId, spo2, bpm, temperature);
   if (!maResult.ready) {
     // chưa đủ mẫu để tính trung bình, chờ mẫu tiếp theo
     return;
   }
 
-  const { spo2Avg, bpmAvg } = maResult;
+  const { spo2Avg, bpmAvg, temperatureAvg } = maResult;
 
   // Chức năng 5-6: phân tích & phát hiện bất thường (đã tích hợp cơ chế liên tiếp)
-  const analysis = alertDetection.analyze(deviceId, spo2Avg, bpmAvg);
+  const analysis = alertDetection.analyze(actualDeviceId, spo2Avg, bpmAvg, temperatureAvg);
 
   // ***có thể tính toán thời gian này thành ngày giờ cụ thể 
   const ts = timestamp || Math.floor(Date.now() / 1000);
 
   // Chức năng 7: lưu dữ liệu vào Firebase
-  await firebaseService.addTelemetry(deviceId, {
+  await firebaseService.addTelemetry(actualDeviceId, {
     timestamp: ts,
     spo2: spo2Avg,
     bpm: bpmAvg,
+    temperature: temperatureAvg,
     status: analysis.status, // NORMAL | WATCH | CRITICAL
   });
 
   console.log(
-    `[Telemetry] ${deviceId} | SpO2=${spo2Avg}% BPM=${bpmAvg} -> ${analysis.status} ` +
+    `[Telemetry] ${actualDeviceId} | SpO2=${spo2Avg}% BPM=${bpmAvg} -> ${analysis.status} ` +
       `(spo2Streak=${analysis.counters.spo2}, bpmStreak=${analysis.counters.bpm})`
   );
 
   // Chức năng 6 + 9: nếu đã xác nhận bất thường (đủ N lần liên tiếp) -> lưu alert + gửi thông báo
   if (analysis.confirmedAlert) {
     const alertRecord = {
-      deviceId,
+      deviceId: actualDeviceId,
       timestamp: ts,
       type: analysis.confirmedAlert.type,
       message: analysis.confirmedAlert.message,
     };
     await firebaseService.addAlert(alertRecord);
-    await notificationService.notifyAlert({ ...alertRecord, spo2: spo2Avg, bpm: bpmAvg });
+    await notificationService.notifyAlert({ ...alertRecord, spo2: spo2Avg, bpm: bpmAvg, temperature: temperatureAvg });
   }
 }
 
 /**
  * Chức năng 10: heartbeat / trạng thái thiết bị.
  */
-async function handleDeviceStatus(payload) {
-  const { deviceId, status, timestamp } = payload;
-  if (!deviceId) return;
-  const ts = timestamp || Math.floor(Date.now() / 1000);
-  if (status === 'online') {
-    deviceStatusService.markOnline(deviceId, ts);
-    console.log(`[Heartbeat] ${deviceId} online lúc ${new Date(ts * 1000).toISOString()}`);
-  }
+async function handleDeviceStatus(payload, topic) {
+    const parts = topic.split('/');
+    const deviceId = parts[2];
+
+    const ts = payload.last_seen
+        ? Math.floor(new Date(payload.last_seen).getTime() / 1000)
+        : Math.floor(Date.now() / 1000);
+
+    if (payload.online === true) {
+        deviceStatusService.markOnline(deviceId, ts);
+    }
 }
 
 /**
  * Chức năng 2 — Backend gửi lệnh điều khiển tới ESP32 qua MQTT (buzzer/led/oled).
  */
-function publishControl(mqttClient, deviceId, kind, payload) {
+function publishControl(mqttClient, actualDeviceId, kind, payload) {
   const topicFn = {
     buzzer: config.TOPICS.DEVICE_CONTROL_BUZZER,
     led: config.TOPICS.DEVICE_CONTROL_LED,
@@ -113,7 +119,7 @@ function publishControl(mqttClient, deviceId, kind, payload) {
 
   if (!topicFn) throw new Error(`Loại điều khiển không hỗ trợ: ${kind}`);
 
-  const topic = topicFn(deviceId);
+  const topic = topicFn(actualDeviceId);
   mqttClient.publish(topic, JSON.stringify(payload), { qos: 1 });
   console.log(`[MQTT] Đã gửi lệnh điều khiển tới ${topic}:`, payload);
   return topic;

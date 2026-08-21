@@ -8,8 +8,8 @@ module.exports = {
   PASSWORD: process.env.MQTT_PASSWORD || undefined,
 
   TOPICS: {
-    DEVICE_DATA: `${PREFIX}/device/data`,
-    DEVICE_STATUS: `${PREFIX}/device/status`,
+    DEVICE_DATA: `${PREFIX}/device/esp32_001/data`,
+    DEVICE_STATUS: `${PREFIX}/device/esp32_001/status`,
     DEVICE_CONTROL_BUZZER: (deviceId) => `${PREFIX}/device/${deviceId}/control/buzzer`,
     DEVICE_CONTROL_LED: (deviceId) => `${PREFIX}/device/${deviceId}/control/led`,
     DEVICE_CONTROL_OLED: (deviceId) => `${PREFIX}/device/${deviceId}/control/oled`,
