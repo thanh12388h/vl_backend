@@ -94,7 +94,15 @@ function makeControllers(mqttClient) {
         return res.status(400).json({ success: false, error: validation.error });
       }
       const updated = setThresholdsForDevice(deviceId, req.body);
-      console.log(`[API] ✅ Đã cập nhật threshold cho ${deviceId}:`);
+      console.log(`[API] ✅ Đã cập nhật threshold ở RAM cho ${deviceId}:`);
+
+      try {
+        publishControl(mqttClient, deviceId, 'oled', req.body);
+        console.log(`[API] ✅ Đã cập nhật threshold thực sự đến cho ${deviceId}:`);
+      } catch (err) {
+        console.error(`[API] ❌ Lỗi publish MQTT threshold cho ${deviceId}:`, err.message);
+      }
+
       res.json({ success: true, thresholds: updated });
     },
 
