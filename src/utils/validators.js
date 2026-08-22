@@ -101,16 +101,13 @@ function validateSnoozeRequest(body) {
 /**
  * Validate lệnh buzzer (ESP32 không hỗ trợ)
  */
+// src/utils/validators.js
 function validateBuzzerRequest(body) {
   if (!body || !isBoolean(body.state)) {
     return { valid: false, error: "Trường 'state' phải là boolean (true/false)" };
   }
   
-  // ESP32 không hỗ trợ điều khiển buzzer riêng
-  return { 
-    valid: false, 
-    error: 'ESP32 không hỗ trợ điều khiển buzzer độc lập. Buzzer được điều khiển tự động theo cảnh báo.' 
-  };
+  return { valid: true }; // Cho phép đi tiếp
 }
 
 /**

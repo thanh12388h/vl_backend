@@ -37,7 +37,24 @@ function makeControllers(mqttClient) {
       if (!latest) {
         return res.status(404).json({ error: 'Chưa có dữ liệu cho thiết bị này' });
       }
-      res.json({ spo2: latest.spo2, bpm: latest.bpm, temperature: latest.temperature, status: latest.status });
+
+      let dateObj;
+      if (!latest.timestamp) {
+        dateObj = new Date();
+      } else if (typeof latest.timestamp === 'number') {
+        dateObj = new Date(latest.timestamp < 1e11 ? latest.timestamp * 1000 : latest.timestamp);
+      } else {
+        dateObj = new Date(latest.timestamp);
+      }
+
+      res.json({
+        time: dateObj.toISOString(),
+        spo2: latest.spo2,
+        bpm: latest.bpm,
+        temperature: latest.temperature,
+        status: latest.status
+      });
+      console.log(`[API] ✅ Đã lấy lịch sử lần gần nhất thành công cho ${deviceId}:`);
     },
 
     // GET /api/v1/history?deviceId=...&limit=...
@@ -65,7 +82,8 @@ function makeControllers(mqttClient) {
         return res.status(400).json({ success: false, error: validation.error });
       }
       try {
-        publishControl(mqttClient, deviceId, 'buzzer', { state: req.body.state });
+        // Gửi lệnh snooze tắt còi tạm thời (60s) xuống ESP32
+        publishControl(mqttClient, deviceId, 'oled', { type: 'snooze', duration_sec: 60 });
         res.json({ success: true });
       } catch (err) {
         res.status(500).json({ success: false, error: err.message });
